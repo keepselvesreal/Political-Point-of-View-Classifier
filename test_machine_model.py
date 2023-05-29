@@ -1,0 +1,83 @@
+import os 
+import sys
+import random
+import glob
+import wandb
+import pandas as pd
+import numpy as np
+from konlpy.tag import Mecab
+
+sys.path.append('cd /content/drive/MyDrive/프로젝트/politic_value_relationship/test3/files')
+from ml_trainer import ML_Trainer
+from utils import initialize_wandb, summarize_result, show_confusion_matrix
+
+class CFG:
+    seed = 7
+    fusion = False # False: <온라인 커뮤니티 데이터>로 학습한 모델을 사용/ True : <온라인 커뮤니티 데이터 + 네이버 댓글 데이터>로 학습한 모델을 사용
+    path_idx = 2 # 모델 경로 리스트에서 특정 모델 경로를 선택하는 인덱스
+    model = None
+    cv = 5
+    n_iter = 20
+    use_gbm = True if model == 'LGBM' else False
+    tokenizer = Mecab()
+    tokenizer_type = 'morphs'
+    max_len = 300
+    csv_path =  None
+    model_path = None
+    output_path = '/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/outputs/'
+    
+os.environ['PYTHONHASHSEED'] = str(CFG.seed)
+random.seed(CFG.seed)
+np.random.seed(CFG.seed)
+
+wandb.login(key='ed8eccb1b48e18c315c20244f4b7156c28be8ec0')
+
+WANDB_CONFIG = {
+        'model': CFG.model,
+        'path_idx': CFG.path_idx,
+        'arch': 'ML',
+        'data': None
+        }
+
+def ml_test(model_path, test_df, id):
+    trainer = ML_Trainer(CFG, test_df, stage='test')
+    trainer.load(model_path)
+   
+    outputs_dict = trainer.test()
+    outputs_dict['content'] = test_df.document.values
+
+    summarize_result(CFG, id, outputs_dict, 'test')
+    show_confusion_matrix(CFG, id, outputs_dict, 'test')
+    
+    wandb.finish(quiet=True)
+
+def main(args):
+    CFG.model = args.model
+    CFG.path_idx = args.path_idx
+    CFG.fusion = args.fusion
+    file_name = args.file_name
+    CFG.csv_path = f'/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/data/{file_name}' if CFG.fusion else f'/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/data/{file_name}'
+    CFG.model_path = '/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/fusion_models/' if CFG.fusion else '/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/base_models/'
+
+    id = initialize_wandb(WANDB_CONFIG, args, 'test')
+
+    test_df = pd.read_csv(CFG.csv_path)
+    print('test_df shape', test_df.shape)
+
+    if CFG.model == 'LR':
+        model_path_list = glob.glob(os.path.join(CFG.model_path, '*LR*'))
+        selected_model_path = model_path_list[CFG.path_idx]
+    elif CFG.model == 'NB':
+        model_path_list = glob.glob(os.path.join(CFG.model_path, '*NB*'))
+        selected_model_path = model_path_list[CFG.path_idx]
+    elif CFG.model == 'LGBM':
+        model_path_list = glob.glob(os.path.join(CFG.model_path, '*LGBM*'))
+        selected_model_path = model_path_list[CFG.path_idx]
+    print('model path_list -> ', model_path_list)
+    print('selected_model path -> ', selected_model_path)
+
+    ml_test(selected_model_path, test_df, id)
+
+if __name__ == '__main__':
+    main(args)
+
