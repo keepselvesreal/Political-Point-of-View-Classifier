@@ -19,13 +19,13 @@ class CFG:
     seed = 7
     stratified = True
     n_splits = 5
-    fusion = False # 고정값
+    fusion = False # False: <온라인 커뮤니티 데이터>로 학습하는 경우/ True : <온라인 커뮤니티 데이터 + 네이버 댓글 데이터>로 학습하는 경우
     fold = 0 # 변수
 
-    model = 'LGBM' # 변수
-    params = None # 하이퍼파라미터 튜닝 시 사용
-    cv = 5 # 하이퍼파라미터 튜닝 시 사용
-    n_iter = 20 # 하이퍼파라미터 튜닝 시 사용
+    model = None
+    params = None 
+    cv = 5 
+    n_iter = 20
     use_gbm = True if model == 'LGBM' else False
     
     tokenizer = Mecab()
@@ -67,7 +67,7 @@ def main(args):
   else:
       folds = KFold(n_splits=5, shuffle=True)
       train_idx, valid_idx = list(folds.split(train_df.values))[CFG.fold]
-  valid_df = train_df.iloc[valid_idx] # train_df부터 하면 밑에 train_df도 변해서 인덱스 오류 발생
+  valid_df = train_df.iloc[valid_idx]
   train_df = train_df.iloc[train_idx]
   print('train_df shape', train_df.shape)
   print('valid_df shape', valid_df.shape)
@@ -80,7 +80,6 @@ def main(args):
   elif CFG.model == 'SVC':
     model = SVC(probability=True)
   elif CFG.model == "LGBM":
-    # num_iterations 파라미터 값을 설정하지 않았기에 다른 설정 값들이 종합적으로 고려되어 boosting iteration이 결정
     model = LGBMClassifier(learning_rate=0.1, 
                           max_depth=8,
                           min_split_gain=4,
