@@ -138,7 +138,7 @@ def main(args):
     else:
         folds = KFold(n_splits=5, shuffle=True)
         train_idx, valid_idx = list(folds.split(train_df.values))[CFG.fold]
-    valid_df = train_df.iloc[valid_idx] # train_df부터 하면 밑에 train_df도 변해서 인덱스 오류 발생
+    valid_df = train_df.iloc[valid_idx]
     train_df = train_df.iloc[train_idx]
     print('train_df shape', train_df.shape)
     print('valid_df shape', valid_df.shape)
