@@ -48,13 +48,13 @@ class Rnn(nn.Module):
         embed = self.dropout(embed)
         # embedded: (sentence_length, batch_size, embedding_dim)
         if self.config.seq_type == 'packing':
-            embed = nn.utils.rnn.pack_padded_sequence(embed, lengths.cpu().numpy(), enforce_sorted=False) # 위에서 seq_first로 바꿨단 걸 고려못했네! batch_first=True 제외시켜야
+            embed = nn.utils.rnn.pack_padded_sequence(embed, lengths.cpu().numpy(), enforce_sorted=False)
         
         # gru_output: (sentence_length, batch_size, hidden_dim * 2)
         # hidden: (num_layers * 2, batch_size, hidden_dim)
         gru_output, hidden = self.model(embed)
         if self.config.seq_type == 'packing':
-            gru_output, unpacked_lengths = nn.utils.rnn.pad_packed_sequence(gru_output) # packing data 입력 시 출력 결과 주의해야
+            gru_output, unpacked_lengths = nn.utils.rnn.pad_packed_sequence(gru_output)
         if isinstance(hidden, tuple):
             hidden = hidden[0]
         
