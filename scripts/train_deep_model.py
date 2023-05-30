@@ -20,12 +20,12 @@ class CFG:
     stratified = True
     n_splits = 5
     fold = 0 # 변수
-    fusion = True # 변수. fusion 여부에 따라 변경
+    fusion = True # False: <온라인 커뮤니티 데이터>로 학습하는 경우/ True : <온라인 커뮤니티 데이터 + 네이버 댓글 데이터>로 학습하는 경우
     
-    model = 'rnn' # 변수
-    batch_size = 64 # 하이퍼파라미터 튜닝 대상
-    epochs = 2 # 변수? # 하이퍼파라미터 튜닝 대상?
-    load_data = False # 데이터로더 저장 유무
+    model = 'rnn'
+    batch_size = 64 
+    epochs = 7 
+    load_data = False 
     tokenizer = Mecab()
     tokenizer_type = 'morphs'
     stopwords = ['의','가','이','은','들','는','좀','잘','걍','과','도','를','으로','자','에','와','한','하다']
@@ -33,36 +33,36 @@ class CFG:
  
     vocab = None
     vocab_size = None
-    seq_type = 'packing' # 하이퍼파라미터 튜닝 대상
+    seq_type = 'packing'
     max_len = 300 # 변수
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu' # 어디에 사용되는지 살펴보기
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-    dropout = 0.2 # 하이퍼파라미터 튜닝 대상
+    dropout = 0.2
     output_dim = 4 
-    embedding_dim = 256 # 하이퍼파라미터 튜닝 대상
-    hidden_dim = 128 # 하이퍼파라미터 튜닝 대상
-    rnn_type = 'GRU' # 하이퍼파라미터 튜닝 대상
-    bidirectional = True # 하이퍼파라미터 튜닝 대상
-    num_layers = 5 # 하이퍼파라미터 튜닝 대상
-    activation = 'ReLU' # 하이퍼파라미터 튜닝 대상
-    window_size = 5 # 하이퍼파라미터 튜닝 대상
-    window_size_list = [2 ,4, 6] # 하이퍼파라미터 튜닝 대상
-    num_filter = 100 # 하이퍼파라미터 튜닝 대상
-    num_filter_list = [150, 150, 150] # 하이퍼파라미터 튜닝 대상
-    use_batch_norm = False # 하이퍼파라미터 튜닝 대상
+    embedding_dim = 256 
+    hidden_dim = 128 
+    rnn_type = 'GRU' 
+    bidirectional = True 
+    num_layers = 5 #
+    activation = 'ReLU' 
+    window_size = 5 
+    window_size_list = [2 ,4, 6] 
+    num_filter = 100 
+    num_filter_list = [150, 150, 150]
+    use_batch_norm = False
 
     loss = 'CrossEntropyLoss'
     lr = 1e-3
-    lr_scheduler = 'gls' # # 하이퍼파라미터 튜닝 대상. gls, cos, exp 중 선택
-    optim = 'Adam' # # 하이퍼파라미터 튜닝 대상. Adam, RMSprop, AdamP 중 선택
-    warm_steps = 150 # # 하이퍼파라미터 튜닝 대상. 보통 전체 학습 스탭의 5~20%
-    T_0 = 20 # # 하이퍼파라미터 튜닝 대상. 일반적으로 10~100 사이 값
-    T_mult = 1 # # 하이퍼파라미터 튜닝 대상. 기본값=1
-    eta_min = 1e-4 #  # 하이퍼파라미터 튜닝 대상. 기본값=0
-    gamma = 0.5 # # 하이퍼파라미터 튜닝 대상. 기본값=0(학습률이 변하지 않음) 1보다 작으면 learning rate는 epoch에 따라 증가, 크면 동일한 방식으로 감소
+    lr_scheduler = 'gls'  # 'gls': get_linear_schedule_with_warmup, 'cos': CosineAnnealingWarmRestarts, 'exp': ExponentialLR, 'red': ReduceLROnPlateau, 'step' StepLR
+    optim = 'Adam' # 'Adam', 'RMSprop', 'AdamP'
+    warm_steps = 150
+    T_0 = 20 
+    T_mult = 1
+    eta_min = 1e-4 
+    gamma = 0.5
     scaler = GradScaler() 
-    max_grad_norm = False # 하이퍼파라미터 튜닝 대상
-    accumulation_steps = False # 하이퍼파라미터 튜닝 대상
+    max_grad_norm = False 
+    accumulation_steps = False
     patience = 3
     
     # extra.csv(transfer_train data)=community+naver data, train_data=community_data
