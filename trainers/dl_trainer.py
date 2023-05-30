@@ -1,4 +1,4 @@
-# reference: https://www.kaggle.com/code/debarshichanda/pytorch-feedback-deberta-v3-baseline
+# reference: https://www.kaggle.com/code/debarshichanda/pytorch-feedback-deberta-v3-baseline 바탕으로 작성
 
 import os
 import sys
