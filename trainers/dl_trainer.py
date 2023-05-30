@@ -153,7 +153,7 @@ class Trainer:
                 self.attention_dict['input_ids'] = np.concatenate([self.attention_dict['input_ids'], input_ids.cpu().detach().numpy()], axis=0)
                 self.attention_dict['attn'] = np.concatenate([self.attention_dict['attn'], attn_probs.cpu().detach().numpy()], axis=0)
             
-            # GPU 메모리에 부담이 되지 않게 Loss를 기준으로 attention 시각화를 위해 수집한 정보를 필터링
+            # GPU 메모리에 부담이 되지 않게 attention 시각화 관련 정보를 Loss를 기준으로 필터링
             if self.attention_dict['output'].shape[0] >= 32:
               self.filter_attention_dict()
         
@@ -214,7 +214,7 @@ class Trainer:
         pbar = tqdm(enumerate(self.valid_loader), total=len(self.valid_loader), desc='processing output') 
         outputs_dict = {'output': [], 'pred': []} # 
 
-        for idx, data_dict in pbar: # set_description 넣든지 하기
+        for idx, data_dict in pbar:
             model_outputs = self.model(data_dict, stage='predict')
             outputs = model_outputs['output']
             preds = outputs.argmax(1)
