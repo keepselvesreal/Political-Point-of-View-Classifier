@@ -34,7 +34,7 @@ class CFG:
     vocab = None
     vocab_size = None
     seq_type = 'packing'
-    max_len = 300 # 변수
+    max_len = 300
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
     dropout = 0.2
