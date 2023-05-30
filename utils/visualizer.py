@@ -1,3 +1,5 @@
+# reference: 어텐션 시각화 코드 -> 책 <만들면서 배우는 파이토치 딥러닝>의 Chapter8 예제 
+
 import numpy as np
 import pandas as pd
 from IPython.display import HTML, display
