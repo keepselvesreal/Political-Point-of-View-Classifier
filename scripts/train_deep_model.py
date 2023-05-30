@@ -22,7 +22,7 @@ class CFG:
     fold = 0 # 변수
     fusion = True # False: <온라인 커뮤니티 데이터>로 학습하는 경우/ True : <온라인 커뮤니티 데이터 + 네이버 댓글 데이터>로 학습하는 경우
     
-    model = 'rnn'
+    model = None
     batch_size = 64 
     epochs = 7 
     load_data = False 
