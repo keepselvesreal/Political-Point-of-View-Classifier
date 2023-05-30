@@ -1,3 +1,5 @@
+# reference: rnn attention -> https://github.com/gucci-j/pytorch-imdb-cv/blob/master/src/model.py, cnn -> https://github.com/kh-kim/simple-ntc/blob/master/simple_ntc/models/cnn.py
+    
 import math
 import torch
 from torch import nn
