@@ -56,7 +56,7 @@ class DL_DataModule:
         token_counts = Counter()
         for row in tqdm(df.itertuples(), total=len(df), desc='tokenizing', leave=True):
             tokenized_sentence = self.tokenizer.morphs(row.document)
-            stopwords_removed_sentence = [word for word in tokenized_sentence if not word in self.config.stopwords] # 불용어 제거
+            stopwords_removed_sentence = [word for word in tokenized_sentence if not word in self.config.stopwords]
             token_counts.update(stopwords_removed_sentence)
 
         filtered_token_counts = dict(filter(lambda x: x[1] > self.config.min_freq, token_counts.items()))
@@ -76,7 +76,7 @@ class DL_DataModule:
         elif self.confi.tokenizer_type == 'nouns':
             tokenizer = self.tokenizer.nouns
 
-        text_pipeline = lambda x: [self.vocab[token] for token in tokenizer(x)] # 221126 version에서 stem=True 제거
+        text_pipeline = lambda x: [self.vocab[token] for token in tokenizer(x)]
         token_list = []
         drop_idx_list = []
         for row in tqdm(df.itertuples(), total=len(df), desc='encoding', leave=True):
