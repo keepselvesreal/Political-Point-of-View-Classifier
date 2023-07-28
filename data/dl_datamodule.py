@@ -1,17 +1,34 @@
+"""
+딥러닝 모델이 사용할 데이터로더를 만드는 라이브러리.
+
+주요 클래스:
+    DL_Dataset: 토큰 리스트 집합과 라벨 집합을 입력 받아 각 토큰 리스트와 라벨을 텐서로 변환합니다.
+    DL_DataModule: 입력 데이터로 토큰화, 단어집합 생성, 정수 인코딩, 패딩(선택사항) 작업을 진행하여 데이터세트와 데이터로더를 만듭니다.
+
+주요 함수:
+    collate_fn: RNN 계열에 입력할 데이터를 패킹 방식으로 구성할 때 배치 단위로 길이를 통일시켜 데이터로더에서 오류가 발생하지 않게 해줍니다.
+"""
+
+
 import pandas as pd
 import torch
 from torch import nn
 from torchtext.vocab import vocab
 from torch.utils.data import DataLoader, Dataset
-
 from tqdm.notebook import tqdm
 from collections import Counter, OrderedDict
 
-class CFG:
-    vocab = None
-    vocab_size = None
 
 def collate_fn(batch):
+    """
+    배치에 포함된 다양한 길이의 데이터를 배치에서 가장 긴 데이터의 길이로 통일시킵니다.
+
+    Args:
+        batch: 문장을 정수 인코딩한 데이터가 배치 크기만큼 담겨 있는 데이터 집합. tensor.
+    Returns:
+        동일한 길이로 맞춰진 인코딩 데이터, 길이가 통일되기 전의 각 인코딩 데이터 길이, 라벨. dictionary. 
+
+    """
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     input_ids = nn.utils.rnn.pad_sequence([data_dict['input_ids'] for data_dict in batch], batch_first=True).to(device)
     length = torch.tensor([len(data_dict['input_ids']) for data_dict in batch]).to(device)
@@ -22,28 +39,39 @@ def collate_fn(batch):
     else:
         return {'input_ids': input_ids, 'length': length}
 
+
 class DL_Dataset(Dataset):
-  def __init__(self, token_list, label_list=None, stage='train'):
-    self.token_list = token_list
-    self.label_list = label_list
-    self.stage=stage
+    def __init__(self, token_list, label_list=None, stage='train'):
+        self.token_list = token_list
+        self.label_list = label_list
+        self.stage=stage
 
-  def __getitem__(self, idx):
-    data_dict = {}
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    if self.stage == 'predict':
-        data_dict['input_ids'] = torch.tensor(self.token_list[idx]).to(device)
-    else:
-        data_dict['input_ids'], data_dict['label'] = torch.tensor(self.token_list[idx]).to(device), torch.tensor(self.label_list[idx]).to(device)
-    return data_dict
+    def __getitem__(self, idx):
+        data_dict = {}
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        if self.stage == 'predict':
+            data_dict['input_ids'] = torch.tensor(self.token_list[idx]).to(device)
+        else:
+            data_dict['input_ids'], data_dict['label'] = torch.tensor(self.token_list[idx]).to(device), torch.tensor(self.label_list[idx]).to(device)
+        return data_dict
 
-  def __len__(self):
-    return len(self.token_list)
-  
+    def __len__(self):
+        return len(self.token_list)
+
 
 class DL_DataModule:
+    """
+    입력 데이터로 일련의 작업을 수행해 데이터로더를 만듭니다.
+
+    Args:
+        config: 미리 정의한 설정값. class.
+        data: 입력 데이터. 2개의 dataframe을 담은 tuple 또는 dataframe.
+    Returns:
+        DataLoader.
+    """
     def __init__(self, config, data=None):
         self.config = config
+        # 학습과 검증 때는 2개의 데이터(학습, 검증 데이터)가 입력되고, 시험 때는 1개의 데이터만 입력.
         if isinstance(data, tuple):
             self.train_df, self.valid_df = data
         elif isinstance(data, pd.DataFrame):

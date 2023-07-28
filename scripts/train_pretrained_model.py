@@ -1,3 +1,13 @@
+"""
+사전훈련 모델을 훈련시키는 모듈
+
+데이터를 불러와 훈련, 검증 데이터를 만든 후 pm_datamodule, _pm_model, trainer 모듈을 이용해 모델을 훈련하고 검증합니다.
+훈련과 검증 과정의 모델 성능 지표는 wandb 라이브러리를 이용해 기록합니다.
+모델의 주요 반환값을 화면에 출력하고, 혼동 행렬도 시각화합니다.
+visualizer 모듈을 이용하여 선별한 데이터의 텍스트에 모델의 어텐션 점수를 시각화합니다.
+"""
+
+
 import os
 import sys
 import random
@@ -16,6 +26,7 @@ from trainer import Trainer
 from pm_model import Kcbert
 from visualizer import Visualizer
 from utils import initialize_wandb, summarize_result, show_confusion_matrix
+
 
 class CFG:
     seed = 7
@@ -87,6 +98,7 @@ def main(args):
     CFG.csv_path = f'/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/data/{file_name}' if CFG.fusion else f'/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/data/{file_name}'
     CFG.model_path = '/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/fusion_models/' if CFG.fusion else '/content/drive/MyDrive/프로젝트/politic_value_relationship/test3/base_models/'
 
+    # utils 모듈의 initialize_wandb 함수를 이용해 wandb 설정값을 입력하고 기록을 시작. wandb 기록 확인에 사용할 식별자(str)를 반환.
     id = initialize_wandb(WANDB_CONFIG, args, 'train')
 
     train_df = pd.read_csv(CFG.csv_path)
@@ -110,12 +122,17 @@ def main(args):
         model = Kcbert(CFG)
     trainer = Trainer(CFG, model, (train_dataloader, valid_dataloader), is_pm=True)
     outputs_dict = trainer.fit()
+    # summarize_result 함수에서 사용하기 위해 입력 텍스트를 수집.
     outputs_dict['content'] = valid_df.document.values
     
+    # utils 모듈의 summarize_result 함수를 이용해 모델의 반환값을 파일에 모두 저장한 후 loss를 기준으로 상위 10개, 하위 10개의 모델 예측과 라벨을 화면에 출력.
     summarize_result(CFG, id, outputs_dict, 'train')
+    # utils 모듈의 show_confusion_matrix 함수를 이용해 혼동 행렬을 화면에 출력.
     show_confusion_matrix(CFG, id, outputs_dict, 'train')
+    # 모델의 어텐션 동작을 시각화하는데 필요한 정보를 trainer 객체에서 가져옴.
     attention_dict = trainer.attention_dict
     visualizer = Visualizer(CFG, None, id, attention_dict)
+    # utils 모듈의 Visualizer 클래스를 이용해 loss를 기준으로 상위 10개, 하위 10개 입력 텍스트에 대한 모델의 어텐션 점수를 시각화. 
     visualizer.show_attention()
     output_path = CFG.output_path + 'train'
     if not os.path.exists(output_path):

@@ -1,8 +1,11 @@
-import math
-import torch
+"""
+사전훈련모델을 구성하는 라이브러리.
+"""
+
+
 from torch import nn
-from torch.nn import functional as F
 from transformers import AutoModel
+
 
 class Kcbert(nn.Module):
     def __init__(self, config):
@@ -22,6 +25,7 @@ class Kcbert(nn.Module):
         if stage == 'train':
             output_dict = {'output': output} 
             return output_dict
+        # 각 토큰에 부여된 어텐션 스코어를 시각화하는 데 사용하기 위해 모델 검증과 시험 때에는 마지막 블록의 어텐션 점수도 수집.  
         else:
             output_dict = {'output': output, 'attn_prob': attn_probs[-1]}
             return output_dict

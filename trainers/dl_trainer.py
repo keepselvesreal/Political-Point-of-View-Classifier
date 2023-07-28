@@ -1,4 +1,13 @@
-# reference: https://www.kaggle.com/code/debarshichanda/pytorch-feedback-deberta-v3-baseline 바탕으로 작성
+"""
+딥러닝 모델의 훈련, 검증, 시험을 담당하고 관련 정보를 출력, 저장하는 라이브러리.
+
+사전훈련 모델을 사용할 경우, 모델 검증과 시험 때에는 모델의 어텐션 작용을 시각화하는 모듈에 넘겨줄 정보를 수집하고 attention_dict 속성에 담아둡니다.
+gradient accumulation과 gradient clipping은 사용자 설정에 따라 적용 여부가 결정됩니다.
+
+사용 가능 클래스
+    Trainer: 딥러닝 모델로 훈련, 검증, 시험 작업을 수행합니다.
+"""
+
 
 import os
 import sys
@@ -18,7 +27,20 @@ from transformers import get_linear_schedule_with_warmup
 sys.path.append('cd /content/drive/MyDrive/프로젝트/politic_value_relationship/test3/files')
 from utils import get_metrics, log_metrics
 
+
+# Trainer 클래스 코드는 https://www.kaggle.com/code/debarshichanda/pytorch-feedback-deberta-v3-baseline를 바탕으로 작성하였습니다.
 class Trainer:
+    """
+    전달받은 커스텀 모델이나 사전훈련 모델로 훈련, 검증, 시험 작업을 수행합니다.
+
+    주요 속성:
+        attention_dict: 모델의 어텐션 작용을 시각화하는 모듈에서 사용할 정보. dictionary.
+
+    주요 메서드:
+        filter_attention_dict: 모든 입력 데이터에 대해 어텐션 시각화에 필요한 정보를 수집하면 GPU 메모리에 큰 부담이 되므로 
+                               loss를 기준으로 상위, 하위 n개 데이터에 대한 정보만 남도록 필터링.
+
+    """
     def __init__(self, config, model, dataloaders, is_pm=False):
         self.config = config
         self.model = model.to(config.device)
@@ -33,7 +55,8 @@ class Trainer:
         self.train_loss_fn = nn.CrossEntropyLoss()
         self.loss_fn = nn.CrossEntropyLoss(reduction='none')
         if self.use_optimizer:
-            self.optimizer, self.scheduler = self.configure_optimizers() 
+            self.optimizer, self.scheduler = self.configure_optimizers()
+        # 모델의 어텐션 점수를 시각화하는 데 사용할 데이터를 수집. 
         self.attention_dict = {'loss': np.empty((0,)), 
                                'output': np.empty((0, self.config.output_dim)), 
                                'label': np.empty((0,), dtype='int'), 
@@ -42,9 +65,6 @@ class Trainer:
                                'attn': np.empty((0, 12, self.config.max_len, self.config.max_len))}
 
     def train_one_epoch(self):
-        """
-        Trains the model for 1 epoch
-        """
         self.model.train()
         pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
         pred_list, target_list = [], []
@@ -109,9 +129,6 @@ class Trainer:
     
     @torch.no_grad()
     def valid_one_epoch(self, stage='valid'):
-        """
-        Validates the model for 1 epoch
-        """
         self.model.eval()
         pbar = tqdm(enumerate(self.valid_loader), total=len(self.valid_loader)) 
         outputs_dict = {'output': [], 'pred': [], 'target': [], 'loss': []}
@@ -150,14 +167,14 @@ class Trainer:
             self.attention_dict['label'] = np.concatenate([self.attention_dict['label'], targets.cpu().detach().numpy()], axis=0)
             self.attention_dict['loss'] = np.concatenate([self.attention_dict['loss'], losses.cpu().detach().numpy()], axis=0)
             
-            # attention 시각화를 위해 필요 정보를 수집
+            # Attention 시각화에 사용할 데이터 수집.
             if self.is_pm:
                 self.attention_dict['input_ids'] = np.concatenate([self.attention_dict['input_ids'], input_ids.cpu().detach().numpy()], axis=0)
                 self.attention_dict['attn'] = np.concatenate([self.attention_dict['attn'], attn_probs.cpu().detach().numpy()], axis=0)
             
-            # GPU 메모리에 부담이 되지 않게 attention 시각화 관련 정보를 Loss를 기준으로 필터링
+            # GPU 메모리에 부담이 되지 않게 loss를 기준으로 Attention 시각화 관련 데이터를 필터링.
             if self.attention_dict['output'].shape[0] >= 32:
-              self.filter_attention_dict()
+                self.filter_attention_dict()
         
         epoch_avg_loss = round(total_loss/ len(self.valid_loader.dataset), 4)
         outputs_dict['epoch_avg_loss'] = epoch_avg_loss
@@ -175,9 +192,6 @@ class Trainer:
         return outputs_dict
     
     def fit(self):
-        """
-        Low-effort alternative for doing the complete training and validation process
-        """
         best_loss = int(1e+7)
         early_stopping_count = 0
 
@@ -208,7 +222,7 @@ class Trainer:
         return outputs_dict
         
     def test(self):
-        outputs_dict = self.valid_one_epoch(stage='valid') # wandb에서 valid와 test 성능을 비교하기 위해 테스트 때도 stage='valid' 사용
+        outputs_dict = self.valid_one_epoch(stage='valid') # wandb에서 valid 성능과 test 성능을 비교하기 위해 test 때도 stage='valid' 사용.
         return outputs_dict
 
     def predict(self):
@@ -235,7 +249,8 @@ class Trainer:
                 self.attention_dict['attn'] = np.concatenate([self.attention_dict['attn'], attn_probs.cpu().detach().numpy()], axis=0)
             
             if self.attention_dict['output'].shape[0] >= 40:
-              self.filter_attention_dict()        
+                # GPU 메모리에 부담이 되지 않게 loss를 기준으로 Attention 시각화 관련 데이터를 필터링.
+                self.filter_attention_dict()        
 
         return outputs_dict
     
@@ -266,10 +281,7 @@ class Trainer:
             raise NotImplementedError('Only cos and exp lr scheduler is Supported!')
         return optimizer, scheduler
 
-    def save_model(self, data, verbose=False):
-        """
-        Saves the model at the provided destination
-        """            
+    def save_model(self, data, verbose=False):       
         path = self.config.model_path
         try:
             if not os.path.exists(path):
@@ -277,13 +289,16 @@ class Trainer:
         except:
             print("Errors encountered while making the output directory")
 
-        # P: pretrained, D: deeplearning, F: fold
+        # 사전훈련 모델을 사용하는 경우.
         if self.is_pm:
+            # 입력 데이터가 <온라인 커뮤니티 데이터 + 네이버 댓글 데이터>로 구성된 데이터인 경우.
             if self.config.fusion:
                 name = f'P_fusion_{self.model.__class__.__name__}_F{self.config.fold}.pt'
             else:
                 name = f'P_{self.model.__class__.__name__}_F{self.config.fold}.pt'
+        # 커스텀 딥러닝 모델을 사용하는 경우
         else:
+            # 입력 데이터가 <온라인 커뮤니티 데이터 + 네이버 댓글 데이터>로 구성된 데이터인 경우.
             if self.config.fusion:
                 name = f'D_fusion_{self.model.__class__.__name__}_F{self.config.fold}.pt'
             else:
@@ -294,15 +309,18 @@ class Trainer:
             print(f"Model Saved at: {os.path.join(path, name)}")
     
     def filter_attention_dict(self, num_top=20, num_bottom=20):
-      top_idx = np.argsort(self.attention_dict['loss'])[-num_top:]
-      bottom_idx = np.argsort(self.attention_dict['loss'])[:num_bottom]
-      
-      for key, value in self.attention_dict.items():
-        if self.is_pm:
-            self.attention_dict[key] = np.concatenate((value[top_idx],  value[bottom_idx]), axis=0)
-        else:
-            if key not in ['input_ids', 'attn']:
+        """
+        loss를 기준으로 데이터를 오름차순으로 정렬 후 num_top과 num_bottom에 설정된 개수만큼 데이터를 선별합니다.
+        """
+        top_idx = np.argsort(self.attention_dict['loss'])[-num_top:]
+        bottom_idx = np.argsort(self.attention_dict['loss'])[:num_bottom]
+        
+        for key, value in self.attention_dict.items():
+            if self.is_pm:
                 self.attention_dict[key] = np.concatenate((value[top_idx],  value[bottom_idx]), axis=0)
-      
-      del top_idx, bottom_idx
-      gc.collect()
+            else:
+                if key not in ['input_ids', 'attn']:
+                    self.attention_dict[key] = np.concatenate((value[top_idx],  value[bottom_idx]), axis=0)
+        
+        del top_idx, bottom_idx
+        gc.collect()

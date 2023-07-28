@@ -1,16 +1,26 @@
+"""
+전통적인 머신러닝 모델의 훈련, 검증, 시험을 담당하고 하이퍼파라미터 튜닝도 수행하는 라이브러리.
+
+입력 데이터로 TF-IDF 행렬를 만든 후 Logistic Regression, Naive Bayes, LightGBM 모델 중 하나로 훈련, 시험, 검증 작업을 수행합니다.
+
+사용 가능 클래스
+    ML_Trainer: 설정값으로 지정한 머신러닝 모델로 훈련, 검증, 시험 작업을 진행하고, 하이퍼파라미터 튜닝 수행합니다.
+"""
+
+
 import os
 import time
 import joblib
 import pandas as pd
 import numpy as np
-from konlpy.tag import Mecab
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
-from sklearn.metrics import log_loss, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import log_loss
 
 from utils import get_metrics
 from utils import log_metrics
+
 
 class ML_Trainer:
     def __init__(self, config, data, model=None, stage='train'):
@@ -27,6 +37,7 @@ class ML_Trainer:
 
     def make_embedding(self, ngram_range=(1, 2), n_features=2**20):
         start = end = time.time()
+        # TfidfVectorizer를 사용하기에는 TF-IDF 행렬의 열을 구성하는 토큰 갯수가 너무 많을 수 있으므로 HashingVectorizer를 사용.
         self.vectorizer = HashingVectorizer(input="content", tokenizer=self.tokenizer.morphs, ngram_range=ngram_range, n_features=n_features, alternate_sign=False)
         train_input_counts = self.vectorizer.fit_transform(self.train_df.document.values)
         self.transformer = TfidfTransformer(use_idf=True,).fit(train_input_counts)
@@ -41,6 +52,7 @@ class ML_Trainer:
         else:
             search = GridSearchCV(self.model, param_grid=params, cv=self.config.cv, scoring='accuracy', n_jobs=-1, verbose=1)
         
+        # LightGBM은 fit 메소드에 사용하는 인자가 일부 다르므로 별도로 처리.
         if self.config.use_gbm:
             inputs_counts = self.vectorizer.transform(self.valid_df.document.values)
             inputs_tfidf = self.transformer.transform(inputs_counts)
@@ -79,7 +91,7 @@ class ML_Trainer:
                     f'train_epoch_f1_score: {metrics[3]}')
         
         output_dict = self.forward()
-      
+
         self.save()
         return output_dict
 

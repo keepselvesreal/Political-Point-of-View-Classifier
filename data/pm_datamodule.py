@@ -1,5 +1,16 @@
+"""
+사전훈련 모델이 사용할 데이터로더를 만드는 라이브러리.
+
+주요 클래스:
+    PM_Dataset: 입력 데이터를 받아 데이터로더에 전달할 데이터 집합을 만듭니다.
+    PM_DataModule: 입력 데이터로 데이터세트와 데이터로더를 만듭니다.
+"""
+
+
 import torch
+import pandas as pd
 from torch.utils.data import DataLoader, Dataset
+
 
 class PM_Dataset(Dataset):
     def __init__(self, df, config, stage='train'):
@@ -29,17 +40,18 @@ class PM_Dataset(Dataset):
         data_dict['attention_mask'] = data_dict['attention_mask'].squeeze(0).to(device)
         data_dict['token_type_ids'] = data_dict['token_type_ids'].squeeze(0).to(device)
         if self.stage != 'predict':
-          data_dict['label'] = torch.tensor(data['label']).to(device)
-          
+            data_dict['label'] = torch.tensor(data['label']).to(device)
         return data_dict
 
+
 class PM_DataModule:
-    def __init__(self, config, df):
+    def __init__(self, config, data):
         self.config = config
-        if len(df) == 2:
-            self.train_df, self.valid_df = df
-        else:
-            self.test_df = df
+        # 학습과 검증 때는 2개의 데이터(학습, 검증 데이터)가 입력되고, 시험 때는 1개의 데이터만 입력.
+        if isinstance(data, tuple):
+            self.train_df, self.valid_df = data
+        elif isinstance(data, pd.DataFrame):
+            self.test_df = data
         self.tokenizer = config.pm_tokenizer
         self.vocab = None
     

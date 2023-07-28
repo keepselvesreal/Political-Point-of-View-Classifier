@@ -1,6 +1,19 @@
+"""
+반복 사용되는 함수들을 모은 모듈.
+
+주요 함수:
+    initialize_wandb: wandb 설정값을 입력하고 기록을 시작합니다.
+    get_metrics: 모델 예측과 라벨을 바탕으로 정확도, 정밀도, 재현율, F1-score를 계산합니다.
+    summarize_result: 모델의 반환값 모두를 파일에 저장하고, 주요 반환값을 선별하여 화면에 출력합니다.
+    show_confusion_matrix: 혼동 행렬을 화면에 출력하고 파일에 저장합니다.
+"""
+
+
 import os
 import sys
 import wandb
+import pytz
+import datetime
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -10,6 +23,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 sys.path.append('cd /content/drive/MyDrive/프로젝트/politic_value_relationship/test3/files')
 from visualizer import int2str
+
 
 def initialize_wandb(config, args, stage):
     if isinstance(config, tuple):
@@ -48,36 +62,38 @@ def initialize_wandb(config, args, stage):
     
     return id
 
+
 def log_time():
-  import datetime
-  import pytz
-  now_utc = datetime.datetime.utcnow()
-  kr_tz = pytz.timezone('Asia/Seoul')
-  now_kr = now_utc.replace(tzinfo=pytz.utc).astimezone(kr_tz)
-  year = now_kr.year
-  month = now_kr.month
-  day = now_kr.day
-  hour = now_kr.hour
-  minute = now_kr.minute
-  now_time = f'{year}.{month}.{day} {hour}:{minute}'
-  return now_time
+    now_utc = datetime.datetime.utcnow()
+    kr_tz = pytz.timezone('Asia/Seoul')
+    now_kr = now_utc.replace(tzinfo=pytz.utc).astimezone(kr_tz)
+    year = now_kr.year
+    month = now_kr.month
+    day = now_kr.day
+    hour = now_kr.hour
+    minute = now_kr.minute
+    now_time = f'{year}.{month}.{day} {hour}:{minute}'
+    return now_time
+
 
 def get_metrics(targets, preds):
-  accuracy = round(accuracy_score(targets, preds), 2)
-  precision = round(precision_score(targets, preds, average='weighted', zero_division=True), 2)
-  recall = round(recall_score(targets, preds, average='weighted'), 2)
-  f1_socre = round(f1_score(targets, preds, average='weighted'), 2)
-  return accuracy, precision, recall, f1_socre
+    accuracy = round(accuracy_score(targets, preds), 2)
+    precision = round(precision_score(targets, preds, average='weighted', zero_division=True), 2)
+    recall = round(recall_score(targets, preds, average='weighted'), 2)
+    f1_socre = round(f1_score(targets, preds, average='weighted'), 2)
+    return accuracy, precision, recall, f1_socre
+
 
 def log_metrics(*args, stage='train'):
-  accuracy, precision, recall, f1_score = args
-  wandb.log(
-    {f'{stage}_epoch_accuracy': accuracy,
-     f'{stage}_epoch_precision': precision,
-     f'{stage}_epoch_recall': recall,
-     f'{stage}_epoch_f1_score': f1_score}
-    )
-  
+    accuracy, precision, recall, f1_score = args
+    wandb.log(
+        {f'{stage}_epoch_accuracy': accuracy,
+        f'{stage}_epoch_precision': precision,
+        f'{stage}_epoch_recall': recall,
+        f'{stage}_epoch_f1_score': f1_score}
+        )
+
+
 def summarize_result(config, model_id, outputs_dict, stage):
     if 'target' in outputs_dict.keys():
         df = pd.DataFrame({'loss': outputs_dict['loss'],
@@ -89,6 +105,7 @@ def summarize_result(config, model_id, outputs_dict, stage):
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         all_df[['pred', 'label']] = all_df[['pred', 'label']].applymap(int2str)
+        # loss를 기준으로 데이터를 선별하기 전에 모든 데이터를 저장.
         all_df.to_csv(output_path + f'/{stage}_all_preds_{model_id}.csv', index=False)
         correct_df = df[df['pred'] == df['label']].sort_values('loss').head(10)
         wrong_df = df[df['pred'] != df['label']].sort_values('loss', ascending=False).head(10)
@@ -111,16 +128,16 @@ def summarize_result(config, model_id, outputs_dict, stage):
         df.to_csv(config.output_path + f'/{stage}_result_{model_id}.csv', index=False)
         print(f'|| 모델: {model_id} ||')
         display(HTML(df.to_html()))
-  
+
+
 def show_confusion_matrix(config, model_id, outputs_dict, stage, ensemble=False):
         conf_matrix = confusion_matrix(outputs_dict['target'], outputs_dict['pred'])
         labels = ['Class 0', 'Class 1', 'Class 2', 'Class 3']
 
-        # normalize confusion matrix
+        # 행의 모든 값을 더해서 합이 1이 되도록 각 요소를 정규화합니다.
         conf_matrix_norm = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
 
-        # plot heatmap
-        fig, ax = plt.subplots(figsize=(8, 6))
+        _, ax = plt.subplots(figsize=(8, 6))
         sns.heatmap(conf_matrix_norm, annot=True, annot_kws={"size": 17}, cmap='Blues', fmt='.2f', xticklabels=labels, yticklabels=labels, ax=ax)
         ax.set_title('Confusion Matrix', fontsize=20, pad=20)
         ax.set_xlabel('Prediction', fontsize=16, labelpad=20)

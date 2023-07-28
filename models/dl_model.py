@@ -1,10 +1,19 @@
-# reference: rnn attention -> https://github.com/gucci-j/pytorch-imdb-cv/blob/master/src/model.py, cnn -> https://github.com/kh-kim/simple-ntc/blob/master/simple_ntc/models/cnn.py
-    
+"""
+딥러닝 모델을 구성하는 라이브러리.
+
+사용 가능 클래스:
+    Rnn: attention mechanism을 활용하는 RNN 계열의 모델을 구성합니다.
+    Cnn: 서로 다른 window_size로 특징을 추출한 뒤 종합하는 CNN 모델을 구성합니다.
+"""
+
+
 import math
 import torch
 from torch import nn
 from torch.nn import functional as F
 
+
+# Rnn 클래스는 https://github.com/gucci-j/pytorch-imdb-cv/blob/master/src/model.py를 참고하여 작성하였습니다.
 class Rnn(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -68,41 +77,42 @@ class Rnn(nn.Module):
         attention_output, attention_weight = self.attention(query=hidden, key=gru_output, value=gru_output)
         
         if self.config.bidirectional:
-          output = self.bi_fc(attention_output)
+            output = self.bi_fc(attention_output)
         else:
-          output = self.fc(attention_output)
+            output = self.fc(attention_output)
         output = F.softmax(output, dim=1)
         output_dict = {'output': output}
         return output_dict
     
 
+# Cnn 클래스는 https://github.com/kh-kim/simple-ntc/blob/master/simple_ntc/models/cnn.py를 참고하여 작성하였습니다.
 class Cnn(nn.Module):
     def __init__(self, config):
-      self.use_batch_norm = config.use_batch_norm
-      self.vocab_size = config.vocab_size
-      self.embedding_dim = config.embedding_dim
-      self.output_dim = config.output_dim
-      self.use_batch_norm = config.use_batch_norm
-      self.dropout = config.dropout
-      self.window_size_list = config.window_size_list
-      self.num_filter_list = config.num_filter_list
+        self.use_batch_norm = config.use_batch_norm
+        self.vocab_size = config.vocab_size
+        self.embedding_dim = config.embedding_dim
+        self.output_dim = config.output_dim
+        self.use_batch_norm = config.use_batch_norm
+        self.dropout = config.dropout
+        self.window_size_list = config.window_size_list
+        self.num_filter_list = config.num_filter_list
 
-      super().__init__()
-      self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
-      self.feature_extractors = nn.ModuleList()
-      for window_size, num_filter in zip(self.window_size_list, self.num_filter_list):
-          self.feature_extractors.append(
-              nn.Sequential(
-                  nn.Conv2d(
-                      in_channels=1, 
-                      out_channels=num_filter,
-                      kernel_size=(window_size, self.embedding_dim),
-                  ),
-                  nn.ReLU(),
-                  nn.BatchNorm2d(num_filter) if self.use_batch_norm else nn.Dropout(self.dropout),
-              )
-          )
-      self.generator = nn.Linear(sum(self.num_filter_list), self.output_dim)
+        super().__init__()
+        self.emb = nn.Embedding(self.vocab_size, self.embedding_dim)
+        self.feature_extractors = nn.ModuleList()
+        for window_size, num_filter in zip(self.window_size_list, self.num_filter_list):
+            self.feature_extractors.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        in_channels=1, 
+                        out_channels=num_filter,
+                        kernel_size=(window_size, self.embedding_dim),
+                    ),
+                    nn.ReLU(),
+                    nn.BatchNorm2d(num_filter) if self.use_batch_norm else nn.Dropout(self.dropout),
+                )
+            )
+        self.generator = nn.Linear(sum(self.num_filter_list), self.output_dim)
 
     def forward(self, data_dict, stage='train'):
         inputs = data_dict['input_ids']
